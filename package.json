@@ -5,9 +5,9 @@
 	"type": "module",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
 		"dev": "tsx watch src/server.ts",
-		"lint": "biome check --write"
+		"lint": "biome check --write",
+		"test": "vitest"
 	},
 	"keywords": [],
 	"author": "",
@@ -31,6 +31,7 @@
 		"@types/pg": "^8.15.5",
 		"drizzle-kit": "^0.31.4",
 		"tsx": "^4.20.3",
-		"typescript": "^5.9.2"
+		"typescript": "^5.9.2",
+		"vitest": "^3.2.4"
 	}
 }
