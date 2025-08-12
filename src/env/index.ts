@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const envSchema = z.object({
 	PORT: z.coerce.number().default(3333),
+	DATABASE_URL: z
+		.string()
+		.default("postgresql://docker:docker@localhost:5432/docker"),
 	NODE_ENV: z.enum(["dev", "production", "test"]).default("dev"),
 });
 

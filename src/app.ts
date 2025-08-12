@@ -1,15 +1,38 @@
+import { fastifySwagger } from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import fastify from "fastify";
+import {
+	jsonSchemaTransform,
+	serializerCompiler,
+	validatorCompiler,
+	type ZodTypeProvider,
+} from "fastify-type-provider-zod";
 import { ZodError } from "zod";
 import { env } from "./env";
+import { userRouter } from "./http/controllers/user";
 
-export const app = fastify();
+export const app = fastify().withTypeProvider<ZodTypeProvider>();
 
-async function index(_: FastifyRequest, replay: FastifyReply) {
-	return replay.status(200).send({ message: "Hello world" });
-}
+// Add schema validator and serializer
+app.setValidatorCompiler(validatorCompiler);
+app.setSerializerCompiler(serializerCompiler);
 
-app.get("/", index);
+app.register(fastifySwagger, {
+	openapi: {
+		info: {
+			title: "Typed API",
+			version: "1.0.0",
+		},
+	},
+	transform: jsonSchemaTransform,
+});
+
+app.register(fastifySwaggerUi, {
+	routePrefix: "/docs",
+});
+
+app.register(userRouter);
 
 app.setErrorHandler((error, _, replay) => {
 	if (error instanceof ZodError) {
