@@ -1,3 +1,4 @@
+import { hash } from "bcryptjs";
 import { failure, success } from "../../shared/domain/result";
 import { User } from "../domain/user.entity";
 import type { UsersRepository } from "../domain/user.repository";
@@ -11,12 +12,20 @@ interface CreateUserUseCaseInput {
 
 export class CreateUserUseCase {
 	constructor(private userRepository: UsersRepository) {}
-	async execute(data: CreateUserUseCaseInput) {
-		if (data.password !== data.confirmPassword) {
+	async execute({ email, password, confirmPassword }: CreateUserUseCaseInput) {
+		const userWithSameEmail = await this.userRepository.findByEmail(email);
+
+		if (userWithSameEmail) {
+			return failure("Email já cadastrado");
+		}
+
+		if (password !== confirmPassword) {
 			return failure("As senhas não coincidem");
 		}
 
-		const user = User.create(data);
+		const password_hash = await hash(password, 6);
+
+		const user = User.create({ email, password: password_hash });
 
 		await this.userRepository.create(user);
 
