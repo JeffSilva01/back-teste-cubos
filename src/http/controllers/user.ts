@@ -4,6 +4,7 @@ import { CreateUserUseCase } from "../../core/user/use-cases/create-user";
 import { GetUserByIdUseCase } from "../../core/user/use-cases/get-user-by-id";
 import { DrizzleUsersRepository } from "../../infra/repository/drizzle-orm/drizzle-orm-user-repository";
 import type { FastifyTypedInstance } from "../../types";
+import { verifyJWT } from "../middlewares/verify-jwt";
 
 export async function userRouter(app: FastifyTypedInstance) {
 	app.post(
@@ -65,6 +66,7 @@ export async function userRouter(app: FastifyTypedInstance) {
 					}),
 				},
 			},
+			preHandler: [verifyJWT],
 		},
 		async (request, replay) => {
 			const { userId } = request.params;
@@ -113,6 +115,44 @@ export async function userRouter(app: FastifyTypedInstance) {
 			const refreshToken = await replay.jwtSign({
 				sign: {
 					sub: result.data.id,
+					expiresIn: "7d",
+				},
+			});
+
+			return replay
+				.setCookie("refreshToken", refreshToken, {
+					path: "/",
+					secure: true,
+					sameSite: true,
+					httpOnly: true,
+				})
+				.status(200)
+				.send({ token });
+		},
+	);
+
+	app.patch(
+		"/token/refresh",
+		{
+			schema: {
+				tags: ["user"],
+				description: "Refresh a user token",
+			},
+		},
+		async (request, replay) => {
+			await request.jwtVerify({ onlyCookie: true });
+
+			const { sub } = request.user;
+
+			const token = await replay.jwtSign({
+				sign: {
+					sub,
+				},
+			});
+
+			const refreshToken = await replay.jwtSign({
+				sign: {
+					sub,
 					expiresIn: "7d",
 				},
 			});
