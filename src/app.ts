@@ -1,3 +1,5 @@
+import fastifyCookie from "@fastify/cookie";
+import fastifyJwt from "@fastify/jwt";
 import { fastifySwagger } from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -31,6 +33,19 @@ app.register(fastifySwagger, {
 app.register(fastifySwaggerUi, {
 	routePrefix: "/docs",
 });
+
+app.register(fastifyJwt, {
+	secret: env.JWT_SECRET,
+	cookie: {
+		cookieName: "refreshToken",
+		signed: false,
+	},
+	sign: {
+		expiresIn: "10m",
+	},
+});
+
+app.register(fastifyCookie);
 
 app.register(userRouter);
 

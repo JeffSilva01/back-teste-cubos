@@ -6,6 +6,7 @@ const envSchema = z.object({
 		.string()
 		.default("postgresql://docker:docker@localhost:5432/docker"),
 	NODE_ENV: z.enum(["dev", "production", "test"]).default("dev"),
+	JWT_SECRET: z.string().default("secret"),
 });
 
 const _env = envSchema.safeParse(process.env);

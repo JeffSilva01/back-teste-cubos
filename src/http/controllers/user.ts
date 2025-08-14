@@ -1,4 +1,5 @@
 import z from "zod";
+import { AuthenticateUseCase } from "../../core/user/use-cases/authenticate";
 import { CreateUserUseCase } from "../../core/user/use-cases/create-user";
 import { GetUserByIdUseCase } from "../../core/user/use-cases/get-user-by-id";
 import { DrizzleUsersRepository } from "../../infra/repository/drizzle-orm/drizzle-orm-user-repository";
@@ -24,7 +25,7 @@ export async function userRouter(app: FastifyTypedInstance) {
 				},
 			},
 		},
-		async (request, reply) => {
+		async (request, replay) => {
 			const { email, password, confirmPassword } = request.body;
 
 			const userRepository = new DrizzleUsersRepository();
@@ -36,10 +37,10 @@ export async function userRouter(app: FastifyTypedInstance) {
 			});
 
 			if (result.isFailure()) {
-				return reply.status(400).send(result.error);
+				return replay.status(400).send(result.error);
 			}
 
-			return reply.status(201).send({
+			return replay.status(201).send({
 				userId: result.data.id,
 			});
 		},
@@ -65,18 +66,66 @@ export async function userRouter(app: FastifyTypedInstance) {
 				},
 			},
 		},
-		async (request, reply) => {
+		async (request, replay) => {
 			const { userId } = request.params;
 
 			const userRepository = new DrizzleUsersRepository();
 			const getUserById = new GetUserByIdUseCase(userRepository);
-			const user = await getUserById.execute({ id: userId });
+			const result = await getUserById.execute({ id: userId });
 
-			if (user.isFailure()) {
-				return reply.status(404).send(user.error);
+			if (result.isFailure()) {
+				return replay.status(404).send(result.error);
 			}
 
-			return reply.status(200).send({ data: user.data });
+			return replay.status(200).send({ data: result.data });
+		},
+	);
+
+	app.post(
+		"/sessions",
+		{
+			schema: {
+				tags: ["user"],
+				description: "Login a user",
+				body: z.object({
+					email: z.email(),
+					password: z.string(),
+				}),
+			},
+		},
+		async (request, replay) => {
+			const { email, password } = request.body;
+
+			const userRepository = new DrizzleUsersRepository();
+			const authenticate = new AuthenticateUseCase(userRepository);
+			const result = await authenticate.execute({ email, password });
+
+			if (result.isFailure()) {
+				return replay.status(401).send(result.error);
+			}
+
+			const token = await replay.jwtSign({
+				sign: {
+					sub: result.data.id,
+				},
+			});
+
+			const refreshToken = await replay.jwtSign({
+				sign: {
+					sub: result.data.id,
+					expiresIn: "7d",
+				},
+			});
+
+			return replay
+				.setCookie("refreshToken", refreshToken, {
+					path: "/",
+					secure: true,
+					sameSite: true,
+					httpOnly: true,
+				})
+				.status(200)
+				.send({ token });
 		},
 	);
 }
